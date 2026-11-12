@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tap & Go</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0d0d0d; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .container { width: 100%; max-width: 400px; text-align: center; }
+        .logo-box {
+            width: 85px; height: 85px; background: #fff; color: #000; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;
+            font-size: 28px; font-weight: bold; box-shadow: 0 4px 15px rgba(255,255,255,0.15);
+        }
+        .brand-title { font-size: 24px; font-weight: 700; }
+        .brand-subtitle { font-size: 14px; color: #a0a0a0; margin: 6px 0 25px; }
+        .links-wrapper { display: flex; flex-direction: column; gap: 14px; }
+        .link-card {
+            background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 16px 20px;
+            display: flex; align-items: center; justify-content: space-between; text-decoration: none;
+            color: #fff; font-size: 15px; font-weight: 600; transition: 0.25s;
+        }
+        .link-card:hover { background: #252525; border-color: #fff; transform: translateY(-2px); }
+        .link-info { display: flex; align-items: center; gap: 12px; }
+        .link-info i { font-size: 20px; width: 25px; text-align: center; }
+        .footer { margin-top: 35px; font-size: 12px; color: #666; }
+        .footer a { color: #888; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-box" id="logoText">T&G</div>
+    <h1 class="brand-title" id="brandName">جاري التحميل...</h1>
+    <p class="brand-subtitle" id="brandSubtitle"></p>
+
+    <div class="links-wrapper" id="linksContainer"></div>
+
+    <div class="footer">
+        Powered by <a href="dashboard.html"><strong>Tap & Go</strong></a> | 01006901765
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyFSsxxB2nNA5AbrCMooVap67go538c_Y",
+        authDomain: "tap-and-g0.firebaseapp.com",
+        projectId: "tap-and-g0",
+        storageBucket: "tap-and-g0.firebasestorage.app",
+        messagingSenderId: "562027850272",
+        appId: "1:562027850272:web:5a6d664469b0d8a8116a45",
+        measurementId: "G-E0C9VEV12J"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get("u");
+
+    async function loadPublicProfile() {
+        if (!username) {
+            renderProfile({
+                businessName: "Tap & Go",
+                bio: "ارتقِ بتجربة عملائك بلمسة واحدة",
+                links: [
+                    { title: "تواصل معنا عبر WhatsApp", url: "https://wa.me/qr/UYIG566SPABQD1", icon: "fa-brands fa-whatsapp" },
+                    { title: "صفحتنا على Instagram", url: "https://www.instagram.com/tapa.ndgo?xtok=MWx5aTFuMjl6ZWJnYw==", icon: "fa-brands fa-instagram" }
+                ]
+            });
+            return;
+        }
+
+        const q = query(collection(db, "profiles"), where("username", "==", username));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            document.getElementById("brandName").innerText = "الصفحة غير موجودة";
+            document.getElementById("brandSubtitle").innerText = "تأكد من صحة الرابط";
+            return;
+        }
+
+        snapshot.forEach(doc => renderProfile(doc.data()));
+    }
+
+    function renderProfile(data) {
+        document.title = `${data.businessName} | Tap & Go`;
+        document.getElementById("logoText").innerText = data.businessName.substring(0, 2).toUpperCase();
+        document.getElementById("brandName").innerText = data.businessName;
+        document.getElementById("brandSubtitle").innerText = data.bio || "";
+
+        const container = document.getElementById("linksContainer");
+        container.innerHTML = "";
+        (data.links || []).forEach(link => {
+            const a = document.createElement("a");
+            a.href = link.url;
+            a.className = "link-card";
+            a.target = "_blank";
+            a.innerHTML = `
+                <div class="link-info">
+                    <i class="${link.icon}"></i>
+                    <span>${link.title}</span>
+                </div>
+                <i class="fa-solid fa-chevron-left"></i>
+            `;
+            container.appendChild(a);
+        });
+    }
+
+    loadPublicProfile();
+</script>
+</body>
+</html>

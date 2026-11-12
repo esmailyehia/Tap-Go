@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tap & Go | لوحة تحكم العميل</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0d0d0d; color: #fff; padding: 20px; display: flex; justify-content: center; }
+        .box { width: 100%; max-width: 480px; background: #161616; padding: 25px; border-radius: 16px; border: 1px solid #2a2a2a; }
+        h2 { text-align: center; margin-bottom: 20px; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; font-size: 14px; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        .btn-primary { background: #ffffff; color: #000000; }
+        .btn-primary:hover { background: #e0e0e0; }
+        .btn-secondary { background: #2a2a2a; color: #fff; margin-top: 8px; }
+        .btn-danger { background: #ff3b30; color: #fff; width: auto; padding: 8px 12px; font-size: 12px; }
+        .link-item { background: #222; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; }
+        .share-box { background: #1e2a24; border: 1px solid #25d366; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .share-box a { color: #25d366; font-weight: bold; word-break: break-all; display: block; margin: 8px 0; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <!-- قسم تسجيل الدخول -->
+    <div id="authSection">
+        <h2>Tap & Go | دخول العملاء</h2>
+        <input type="email" id="email" placeholder="البريد الإلكتروني">
+        <input type="password" id="password" placeholder="كلمة المرور">
+        <button class="btn-primary" onclick="login()">تسجيل الدخول</button>
+        <button class="btn-secondary" onclick="signup()">إنشاء حساب جديد</button>
+    </div>
+
+    <!-- قسم لوحة التحكم -->
+    <div id="dashboardSection" class="hidden">
+        <h2>إعدادات صفحتك الذكية</h2>
+
+        <div class="share-box" id="shareBox">
+            <span>رابط الكارت الخاص بك:</span>
+            <a id="publicLink" href="#" target="_blank">...</a>
+            <button class="btn-secondary" onclick="copyLink()">نسخ الرابط <i class="fa-regular fa-copy"></i></button>
+        </div>
+
+        <label>اسم الرابط (Username بالإنجليزية بدون مسافات):</label>
+        <input type="text" id="username" placeholder="مثال: roma-cafe">
+
+        <label>اسم النشاط التجاري:</label>
+        <input type="text" id="businessName" placeholder="مثال: Roma Cafe">
+
+        <label>وصف قصير:</label>
+        <input type="text" id="bio" placeholder="أهلاً بك! اختر الخدمة المطلوبة">
+
+        <h3 style="margin: 15px 0 10px; font-size: 16px;">الأزرار والروابط:</h3>
+        <div id="linksList"></div>
+
+        <button class="btn-secondary" onclick="addLinkField()">+ إضافة رابط جديد</button>
+        <button class="btn-primary" style="margin-top: 15px;" onclick="saveProfile()">حفظ التغييرات</button>
+        <button class="btn-secondary" style="margin-top: 20px; color: #ff6b6b;" onclick="logout()">تسجيل خروج</button>
+    </div>
+</div>
+
+<!-- مكتبات Firebase -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyFSsxxB2nNA5AbrCMooVap67go538c_Y",
+        authDomain: "tap-and-g0.firebaseapp.com",
+        projectId: "tap-and-g0",
+        storageBucket: "tap-and-g0.firebasestorage.app",
+        messagingSenderId: "562027850272",
+        appId: "1:562027850272:web:5a6d664469b0d8a8116a45",
+        measurementId: "G-E0C9VEV12J"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let currentUser = null;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            document.getElementById("authSection").classList.add("hidden");
+            document.getElementById("dashboardSection").classList.remove("hidden");
+            await loadUserData(user.uid);
+        } else {
+            document.getElementById("authSection").classList.remove("hidden");
+            document.getElementById("dashboardSection").classList.add("hidden");
+        }
+    });
+
+    window.login = async () => {
+        const email = document.getElementById("email").value;
+        const pass = document.getElementById("password").value;
+        try { await signInWithEmailAndPassword(auth, email, pass); }
+        catch (e) { alert("خطأ في الدخول: " + e.message); }
+    };
+
+    window.signup = async () => {
+        const email = document.getElementById("email").value;
+        const pass = document.getElementById("password").value;
+        try { await createUserWithEmailAndPassword(auth, email, pass); }
+        catch (e) { alert("خطأ في التسجيل: " + e.message); }
+    };
+
+    window.logout = () => signOut(auth);
+
+    window.addLinkField = (title = "", url = "", icon = "fa-solid fa-link") => {
+        const div = document.createElement("div");
+        div.className = "link-item";
+        div.innerHTML = `
+            <select class="link-icon">
+                <option value="fa-solid fa-utensils" ${icon === 'fa-solid fa-utensils' ? 'selected' : ''}>منيو (Menu)</option>
+                <option value="fa-solid fa-star" ${icon === 'fa-solid fa-star' ? 'selected' : ''}>تقييم جوجل (Google Review)</option>
+                <option value="fa-solid fa-wallet" ${icon === 'fa-solid fa-wallet' ? 'selected' : ''}>دفع (InstaPay / Wallet)</option>
+                <option value="fa-brands fa-instagram" ${icon === 'fa-brands fa-instagram' ? 'selected' : ''}>إنستجرام (Instagram)</option>
+                <option value="fa-brands fa-whatsapp" ${icon === 'fa-brands fa-whatsapp' ? 'selected' : ''}>واتساب (WhatsApp)</option>
+                <option value="fa-brands fa-tiktok" ${icon === 'fa-brands fa-tiktok' ? 'selected' : ''}>تيك توك (TikTok)</option>
+                <option value="fa-solid fa-location-dot" ${icon === 'fa-solid fa-location-dot' ? 'selected' : ''}>الموقع (Location)</option>
+                <option value="fa-solid fa-link" ${icon === 'fa-solid fa-link' ? 'selected' : ''}>رابط عام (Link)</option>
+            </select>
+            <input type="text" class="link-title" placeholder="عنوان الزر (مثال: المنيو الديجيتال)" value="${title}">
+            <input type="url" class="link-url" placeholder="الرابط (https://...)" value="${url}">
+            <button class="btn-danger" onclick="this.parentElement.remove()">حذف</button>
+        `;
+        document.getElementById("linksList").appendChild(div);
+    };
+
+    async function loadUserData(uid) {
+        const docSnap = await getDoc(doc(db, "profiles", uid));
+        document.getElementById("linksList").innerHTML = "";
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            document.getElementById("username").value = data.username || "";
+            document.getElementById("businessName").value = data.businessName || "";
+            document.getElementById("bio").value = data.bio || "";
+            updateShareLink(data.username);
+            (data.links || []).forEach(l => addLinkField(l.title, l.url, l.icon));
+        } else {
+            addLinkField();
+        }
+    }
+
+    window.saveProfile = async () => {
+        const username = document.getElementById("username").value.trim().toLowerCase().replace(/\s+/g, '-');
+        const businessName = document.getElementById("businessName").value.trim();
+        const bio = document.getElementById("bio").value.trim();
+
+        if (!username || !businessName) return alert("يرجى إدخال اسم الرابط واسم النشاط");
+
+        const links = [];
+        document.querySelectorAll(".link-item").forEach(item => {
+            const title = item.querySelector(".link-title").value.trim();
+            const url = item.querySelector(".link-url").value.trim();
+            const icon = item.querySelector(".link-icon").value;
+            if (title && url) links.push({ title, url, icon });
+        });
+
+        const q = query(collection(db, "profiles"), where("username", "==", username));
+        const querySnapshot = await getDocs(q);
+        let taken = false;
+        querySnapshot.forEach((doc) => { if (doc.id !== currentUser.uid) taken = true; });
+        if (taken) return alert("اسم الرابط ده محجوز لعميل تاني، اختار اسم غيره!");
+
+        await setDoc(doc(db, "profiles", currentUser.uid), {
+            username,
+            businessName,
+            bio,
+            links,
+            updatedAt: new Date()
+        });
+
+        updateShareLink(username);
+        alert("تم حفظ بياناتك بنجاح!");
+    };
+
+    function updateShareLink(username) {
+        if (!username) return;
+        const baseUrl = window.location.origin + window.location.pathname.replace("dashboard.html", "index.html");
+        const fullUrl = `${baseUrl}?u=${username}`;
+        const linkEl = document.getElementById("publicLink");
+        linkEl.href = fullUrl;
+        linkEl.innerText = fullUrl;
+    }
+
+    window.copyLink = () => {
+        const url = document.getElementById("publicLink").innerText;
+        navigator.clipboard.writeText(url);
+        alert("تم نسخ الرابط! تقدر تبرمجه على الكارت دلوقتي.");
+    };
+</script>
+</body>
+</html>

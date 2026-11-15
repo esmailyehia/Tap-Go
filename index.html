@@ -20,13 +20,38 @@
         .link-card {
             background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 16px 20px;
             display: flex; align-items: center; justify-content: space-between; text-decoration: none;
-            color: #fff; font-size: 15px; font-weight: 600; transition: 0.25s;
+            color: #fff; font-size: 15px; font-weight: 600; transition: 0.25s; cursor: pointer;
         }
         .link-card:hover { background: #252525; border-color: #fff; transform: translateY(-2px); }
         .link-info { display: flex; align-items: center; gap: 12px; }
         .link-info i { font-size: 20px; width: 25px; text-align: center; }
         .footer { margin-top: 35px; font-size: 12px; color: #666; }
         .footer a { color: #888; text-decoration: none; }
+
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85);
+            z-index: 9999; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-box {
+            background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 24px;
+            border-radius: 16px; max-width: 340px; width: 100%; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .modal-desc { font-size: 13px; color: #a0a0a0; margin-bottom: 16px; }
+        .wallet-num {
+            background: #0d0d0d; border: 1px dashed #555; padding: 14px; border-radius: 10px;
+            font-size: 22px; font-weight: bold; letter-spacing: 1.5px; margin-bottom: 16px;
+            user-select: all; direction: ltr;
+        }
+        .btn-copy {
+            background: #fff; color: #000; border: none; padding: 12px; border-radius: 10px;
+            font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; margin-bottom: 8px;
+        }
+        .btn-close {
+            background: transparent; color: #888; border: none; padding: 8px;
+            font-size: 13px; width: 100%; cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -40,6 +65,16 @@
 
     <div class="footer">
         Powered by <a href="dashboard.html"><strong>Tap & Go</strong></a> | 01006901765
+    </div>
+</div>
+
+<div class="modal-overlay" id="walletModal" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-box">
+        <div class="modal-title" id="walletModalTitle">التحويل عبر محفظة كاش</div>
+        <div class="modal-desc">تم نسخ الرقم تلقائياً، افتح تطبيق المحفظة واعمل لصق</div>
+        <div class="wallet-num" id="walletNumberDisplay"></div>
+        <button class="btn-copy" id="copyWalletBtn">✓ تم نسخ الرقم</button>
+        <button class="btn-close" onclick="document.getElementById('walletModal').style.display='none'">إغلاق</button>
     </div>
 </div>
 
@@ -62,6 +97,21 @@
 
     const params = new URLSearchParams(window.location.search);
     const username = params.get("u");
+
+    function openWalletModal(title, phoneNumber) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(phoneNumber);
+        }
+        document.getElementById("walletModalTitle").innerText = title || "التحويل عبر محفظة كاش";
+        document.getElementById("walletNumberDisplay").innerText = phoneNumber;
+        const copyBtn = document.getElementById("copyWalletBtn");
+        copyBtn.innerText = "✓ تم نسخ الرقم";
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(phoneNumber);
+            copyBtn.innerText = "✓ تم النسخ بنجاح";
+        };
+        document.getElementById("walletModal").style.display = "flex";
+    }
 
     async function loadPublicProfile() {
         if (!username) {
@@ -97,10 +147,12 @@
         const container = document.getElementById("linksContainer");
         container.innerHTML = "";
         (data.links || []).forEach(link => {
+            const rawUrl = (link.url || "").trim();
+            const cleanUrl = rawUrl.replace(/^https?:\/\//i, "").replace(/\s+/g, "");
+            const isWalletNumber = /^(\+?2)?01[0125][0-9]{8}$/.test(cleanUrl);
+
             const a = document.createElement("a");
-            a.href = link.url;
             a.className = "link-card";
-            a.target = "_blank";
             a.innerHTML = `
                 <div class="link-info">
                     <i class="${link.icon}"></i>
@@ -108,6 +160,19 @@
                 </div>
                 <i class="fa-solid fa-chevron-left"></i>
             `;
+
+            if (isWalletNumber) {
+                const pureNumber = cleanUrl.replace(/^\+?2/, "");
+                a.href = "#";
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    openWalletModal(link.title, pureNumber);
+                };
+            } else {
+                a.href = rawUrl;
+                a.target = "_blank";
+            }
+
             container.appendChild(a);
         });
     }

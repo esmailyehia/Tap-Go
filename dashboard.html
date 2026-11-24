@@ -10,16 +10,62 @@
         body { background: #0d0d0d; color: #fff; padding: 20px; display: flex; justify-content: center; }
         .box { width: 100%; max-width: 480px; background: #161616; padding: 25px; border-radius: 16px; border: 1px solid #2a2a2a; }
         h2 { text-align: center; margin-bottom: 20px; }
+        label { display: block; font-size: 13px; color: #bbb; margin-bottom: 6px; }
         input, select { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; font-size: 14px; }
         button { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 15px; transition: 0.2s; }
         .btn-primary { background: #ffffff; color: #000000; }
         .btn-primary:hover { background: #e0e0e0; }
+        .btn-primary:disabled { background: #666; cursor: not-allowed; }
         .btn-secondary { background: #2a2a2a; color: #fff; margin-top: 8px; }
         .btn-danger { background: #ff3b30; color: #fff; width: auto; padding: 8px 12px; font-size: 12px; }
         .link-item { background: #222; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; }
+        .helper-hint { font-size: 11px; color: #25d366; margin: -6px 0 10px; display: none; }
         .share-box { background: #1e2a24; border: 1px solid #25d366; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
         .share-box a { color: #25d366; font-weight: bold; word-break: break-all; display: block; margin: 8px 0; }
         .hidden { display: none; }
+
+        .branding-section {
+            background: #1c1c1c;
+            border: 1px solid #2f2f2f;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .branding-section h3 {
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-row {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .file-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .preview-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .thumb-preview {
+            width: 52px;
+            height: 52px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #444;
+            background: #111;
+        }
+        .status-badge { font-size: 12px; color: #25d366; }
+        .btn-clear { background: #332020; color: #ff6b6b; width: auto; padding: 6px 10px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -53,16 +99,49 @@
         <label>وصف قصير:</label>
         <input type="text" id="bio" placeholder="أهلاً بك! اختر الخدمة المطلوبة">
 
+        <!-- قسم تخصيص اللوجو والخلفية والخط -->
+        <div class="branding-section">
+            <h3><i class="fa-solid fa-palette"></i> هوية المكان (اختياري)</h3>
+
+            <div class="file-row">
+                <label>لوجو المكان (يسحب الألوان تلقائياً للواجهة):</label>
+                <input type="file" id="logoInput" accept="image/*" style="margin-bottom: 4px;">
+                <div class="preview-bar hidden" id="logoPreviewBar">
+                    <img id="logoPreview" class="thumb-preview" alt="Logo">
+                    <span class="status-badge">✓ اللوجو جاهز</span>
+                    <button type="button" class="btn-clear" onclick="clearMedia('logo')">حذف</button>
+                </div>
+            </div>
+
+            <div class="file-row">
+                <label>صورة خلفية للمكان (تظهر مموهة Blur في الخلفية):</label>
+                <input type="file" id="bgInput" accept="image/*" style="margin-bottom: 4px;">
+                <div class="preview-bar hidden" id="bgPreviewBar">
+                    <img id="bgPreview" class="thumb-preview" alt="Background">
+                    <span class="status-badge">✓ الخلفية جاهزة</span>
+                    <button type="button" class="btn-clear" onclick="clearMedia('bg')">حذف</button>
+                </div>
+            </div>
+
+            <div class="file-row">
+                <label>خط مخصص للواجهة (اختياري - .ttf / .otf / .woff2):</label>
+                <input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2" style="margin-bottom: 4px;">
+                <div class="preview-bar hidden" id="fontPreviewBar">
+                    <span class="status-badge" id="fontStatusText">✓ تم إرفاق خط مخصص</span>
+                    <button type="button" class="btn-clear" onclick="clearMedia('font')">حذف الخط</button>
+                </div>
+            </div>
+        </div>
+
         <h3 style="margin: 15px 0 10px; font-size: 16px;">الأزرار والروابط:</h3>
         <div id="linksList"></div>
 
         <button class="btn-secondary" onclick="addLinkField()">+ إضافة رابط جديد</button>
-        <button class="btn-primary" style="margin-top: 15px;" onclick="saveProfile()">حفظ التغييرات</button>
+        <button class="btn-primary" id="saveBtn" style="margin-top: 15px;" onclick="saveProfile()">حفظ التغييرات</button>
         <button class="btn-secondary" style="margin-top: 20px; color: #ff6b6b;" onclick="logout()">تسجيل خروج</button>
     </div>
 </div>
 
-<!-- مكتبات Firebase -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -82,6 +161,96 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     let currentUser = null;
+
+    let currentLogoUrl = null;
+    let currentBgImageUrl = null;
+    let currentFontData = null;
+
+    function compressImage(file, maxSize, quality) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height && width > maxSize) {
+                        height = Math.round((height * maxSize) / width);
+                        width = maxSize;
+                    } else if (height > maxSize) {
+                        width = Math.round((width * maxSize) / height);
+                        height = maxSize;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const isPng = file.type === "image/png" && maxSize <= 300;
+                    const dataUrl = isPng
+                        ? canvas.toDataURL("image/png")
+                        : canvas.toDataURL("image/webp", quality);
+                    resolve(dataUrl);
+                };
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    document.getElementById("logoInput").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentLogoUrl = await compressImage(file, 260, 0.85);
+        document.getElementById("logoPreview").src = currentLogoUrl;
+        document.getElementById("logoPreviewBar").classList.remove("hidden");
+    });
+
+    document.getElementById("bgInput").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentBgImageUrl = await compressImage(file, 900, 0.72);
+        document.getElementById("bgPreview").src = currentBgImageUrl;
+        document.getElementById("bgPreviewBar").classList.remove("hidden");
+    });
+
+    document.getElementById("fontInput").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 450 * 1024) {
+            alert("حجم ملف الخط كبير جداً (الحد الأقصى 450 كيلوبايت) لضمان سرعة فتح الصفحة للعملاء.");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            currentFontData = reader.result;
+            document.getElementById("fontStatusText").innerText = `✓ الخط جاهز: ${file.name}`;
+            document.getElementById("fontPreviewBar").classList.remove("hidden");
+        };
+        reader.readAsDataURL(file);
+    });
+
+    window.clearMedia = (type) => {
+        if (type === "logo") {
+            currentLogoUrl = null;
+            document.getElementById("logoInput").value = "";
+            document.getElementById("logoPreviewBar").classList.add("hidden");
+        } else if (type === "bg") {
+            currentBgImageUrl = null;
+            document.getElementById("bgInput").value = "";
+            document.getElementById("bgPreviewBar").classList.add("hidden");
+        } else if (type === "font") {
+            currentFontData = null;
+            document.getElementById("fontInput").value = "";
+            document.getElementById("fontPreviewBar").classList.add("hidden");
+        }
+    };
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -111,25 +280,59 @@
 
     window.logout = () => signOut(auth);
 
+    // تحديث شكل الحقل حسب نوع الزر (واتساب / محفظة / رابط عادي)
+    window.handleIconChange = (selectEl) => {
+        const item = selectEl.closest(".link-item");
+        const urlInput = item.querySelector(".link-url");
+        const titleInput = item.querySelector(".link-title");
+        const hint = item.querySelector(".helper-hint");
+
+        if (selectEl.value === "fa-brands fa-whatsapp") {
+            urlInput.placeholder = "اكتب رقم الواتساب فقط (مثال: 01012345678)";
+            urlInput.dir = "ltr";
+            if (!titleInput.value) titleInput.value = "تواصل معنا عبر WhatsApp";
+            hint.innerText = "✓ سيتم تحويل الرقم تلقائياً إلى رابط محادثة واتساب مباشرة";
+            hint.style.display = "block";
+        } else if (selectEl.value === "fa-solid fa-wallet") {
+            urlInput.placeholder = "اكتب رقم المحفظة للنسخ (مثال: 01012345678)";
+            urlInput.dir = "ltr";
+            if (!titleInput.value) titleInput.value = "الدفع عبر محفظة كاش";
+            hint.innerText = "✓ عند الضغط سيتم نسخ الرقم تلقائياً للعميل";
+            hint.style.display = "block";
+        } else {
+            urlInput.placeholder = "الرابط (https://...)";
+            urlInput.dir = "ltr";
+            hint.style.display = "none";
+        }
+    };
+
     window.addLinkField = (title = "", url = "", icon = "fa-solid fa-link") => {
+        // لو رابط واتساب محفوظ بصيغة wa.me نعرض الرقم صافي في لوحة التحكم لسهولة التعديل
+        let displayVal = url;
+        if (icon === "fa-brands fa-whatsapp" && /^https?:\/\/wa\.me\/2(01[0125][0-9]{8})$/.test(url)) {
+            displayVal = url.replace(/^https?:\/\/wa\.me\/2/, "");
+        }
+
         const div = document.createElement("div");
         div.className = "link-item";
         div.innerHTML = `
-            <select class="link-icon">
+            <select class="link-icon" onchange="handleIconChange(this)">
                 <option value="fa-solid fa-utensils" ${icon === 'fa-solid fa-utensils' ? 'selected' : ''}>منيو (Menu)</option>
                 <option value="fa-solid fa-star" ${icon === 'fa-solid fa-star' ? 'selected' : ''}>تقييم جوجل (Google Review)</option>
-                <option value="fa-solid fa-wallet" ${icon === 'fa-solid fa-wallet' ? 'selected' : ''}>دفع (InstaPay / Wallet)</option>
+                <option value="fa-brands fa-whatsapp" ${icon === 'fa-brands fa-whatsapp' ? 'selected' : ''}>واتساب (WhatsApp - رقم مباشر)</option>
+                <option value="fa-solid fa-wallet" ${icon === 'fa-solid fa-wallet' ? 'selected' : ''}>دفع كاش (Wallet - نسخ الرقم)</option>
                 <option value="fa-brands fa-instagram" ${icon === 'fa-brands fa-instagram' ? 'selected' : ''}>إنستجرام (Instagram)</option>
-                <option value="fa-brands fa-whatsapp" ${icon === 'fa-brands fa-whatsapp' ? 'selected' : ''}>واتساب (WhatsApp)</option>
                 <option value="fa-brands fa-tiktok" ${icon === 'fa-brands fa-tiktok' ? 'selected' : ''}>تيك توك (TikTok)</option>
                 <option value="fa-solid fa-location-dot" ${icon === 'fa-solid fa-location-dot' ? 'selected' : ''}>الموقع (Location)</option>
                 <option value="fa-solid fa-link" ${icon === 'fa-solid fa-link' ? 'selected' : ''}>رابط عام (Link)</option>
             </select>
             <input type="text" class="link-title" placeholder="عنوان الزر (مثال: المنيو الديجيتال)" value="${title}">
-            <input type="url" class="link-url" placeholder="الرابط (https://...)" value="${url}">
+            <input type="text" class="link-url" placeholder="الرابط (https://...)" value="${displayVal}">
+            <div class="helper-hint"></div>
             <button class="btn-danger" onclick="this.parentElement.remove()">حذف</button>
         `;
         document.getElementById("linksList").appendChild(div);
+        handleIconChange(div.querySelector(".link-icon"));
     };
 
     async function loadUserData(uid) {
@@ -140,6 +343,23 @@
             document.getElementById("username").value = data.username || "";
             document.getElementById("businessName").value = data.businessName || "";
             document.getElementById("bio").value = data.bio || "";
+
+            if (data.logoUrl) {
+                currentLogoUrl = data.logoUrl;
+                document.getElementById("logoPreview").src = data.logoUrl;
+                document.getElementById("logoPreviewBar").classList.remove("hidden");
+            }
+            if (data.bgImageUrl) {
+                currentBgImageUrl = data.bgImageUrl;
+                document.getElementById("bgPreview").src = data.bgImageUrl;
+                document.getElementById("bgPreviewBar").classList.remove("hidden");
+            }
+            if (data.fontData) {
+                currentFontData = data.fontData;
+                document.getElementById("fontStatusText").innerText = "✓ يوجد خط مخصص محفوظ";
+                document.getElementById("fontPreviewBar").classList.remove("hidden");
+            }
+
             updateShareLink(data.username);
             (data.links || []).forEach(l => addLinkField(l.title, l.url, l.icon));
         } else {
@@ -148,36 +368,64 @@
     }
 
     window.saveProfile = async () => {
+        const saveBtn = document.getElementById("saveBtn");
         const username = document.getElementById("username").value.trim().toLowerCase().replace(/\s+/g, '-');
         const businessName = document.getElementById("businessName").value.trim();
         const bio = document.getElementById("bio").value.trim();
 
         if (!username || !businessName) return alert("يرجى إدخال اسم الرابط واسم النشاط");
 
-        const links = [];
-        document.querySelectorAll(".link-item").forEach(item => {
-            const title = item.querySelector(".link-title").value.trim();
-            const url = item.querySelector(".link-url").value.trim();
-            const icon = item.querySelector(".link-icon").value;
-            if (title && url) links.push({ title, url, icon });
-        });
+        saveBtn.disabled = true;
+        saveBtn.innerText = "جاري الحفظ...";
 
-        const q = query(collection(db, "profiles"), where("username", "==", username));
-        const querySnapshot = await getDocs(q);
-        let taken = false;
-        querySnapshot.forEach((doc) => { if (doc.id !== currentUser.uid) taken = true; });
-        if (taken) return alert("اسم الرابط ده محجوز لعميل تاني، اختار اسم غيره!");
+        try {
+            const links = [];
+            document.querySelectorAll(".link-item").forEach(item => {
+                const title = item.querySelector(".link-title").value.trim();
+                let url = item.querySelector(".link-url").value.trim();
+                const icon = item.querySelector(".link-icon").value;
 
-        await setDoc(doc(db, "profiles", currentUser.uid), {
-            username,
-            businessName,
-            bio,
-            links,
-            updatedAt: new Date()
-        });
+                if (title && url) {
+                    // تحويل رقم الواتساب المصري تلقائياً إلى رابط wa.me
+                    if (icon === "fa-brands fa-whatsapp") {
+                        const cleanPhone = url.replace(/\s+/g, "").replace(/^\+?2/, "");
+                        if (/^01[0125][0-9]{8}$/.test(cleanPhone)) {
+                            url = `https://wa.me/2${cleanPhone}`;
+                        }
+                    }
+                    links.push({ title, url, icon });
+                }
+            });
 
-        updateShareLink(username);
-        alert("تم حفظ بياناتك بنجاح!");
+            const q = query(collection(db, "profiles"), where("username", "==", username));
+            const querySnapshot = await getDocs(q);
+            let taken = false;
+            querySnapshot.forEach((doc) => { if (doc.id !== currentUser.uid) taken = true; });
+            if (taken) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = "حفظ التغييرات";
+                return alert("اسم الرابط ده محجوز لعميل تاني، اختار اسم غيره!");
+            }
+
+            await setDoc(doc(db, "profiles", currentUser.uid), {
+                username,
+                businessName,
+                bio,
+                logoUrl: currentLogoUrl || null,
+                bgImageUrl: currentBgImageUrl || null,
+                fontData: currentFontData || null,
+                links,
+                updatedAt: new Date()
+            });
+
+            updateShareLink(username);
+            alert("تم حفظ بياناتك بنجاح!");
+        } catch (err) {
+            alert("حدث خطأ أثناء الحفظ: " + err.message);
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerText = "حفظ التغييرات";
+        }
     };
 
     function updateShareLink(username) {

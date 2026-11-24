@@ -31,7 +31,6 @@
             overflow-x: hidden;
         }
 
-        /* خلفية المكان المموهة (Blur) */
         .dynamic-bg {
             position: fixed;
             inset: -25px;
@@ -43,7 +42,6 @@
             transition: background-image 0.5s ease;
         }
 
-        /* طبقة تعتيم خفيفة لضمان وضوح الكتابة مهما كانت صورة المكان فاتحة أو غامقة */
         .dynamic-bg-overlay {
             position: fixed;
             inset: 0;
@@ -117,31 +115,33 @@
         .footer { margin-top: 35px; font-size: 12px; color: rgba(255, 255, 255, 0.65); }
         .footer a { color: rgba(255, 255, 255, 0.9); text-decoration: none; }
 
-        /* نافذة المحفظة */
+        /* نوافذ النسخ (محفظة / حساب بنكي + IBAN) */
         .modal-overlay {
             display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85);
             z-index: 9999; align-items: center; justify-content: center; padding: 20px;
         }
         .modal-box {
             background: #1a1a1a; border: 1px solid var(--border-color); color: #fff; padding: 24px;
-            border-radius: 16px; max-width: 340px; width: 100%; text-align: center;
+            border-radius: 16px; max-width: 360px; width: 100%; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
         .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
         .modal-desc { font-size: 13px; color: #a0a0a0; margin-bottom: 16px; }
+        .field-label { font-size: 12px; color: #bbb; margin-bottom: 6px; text-align: right; }
         .wallet-num {
-            background: #0d0d0d; border: 1px dashed var(--primary-color); padding: 14px; border-radius: 10px;
-            font-size: 22px; font-weight: bold; letter-spacing: 1.5px; margin-bottom: 16px;
-            user-select: all; direction: ltr;
+            background: #0d0d0d; border: 1px dashed var(--primary-color); padding: 12px; border-radius: 10px;
+            font-size: 17px; font-weight: bold; letter-spacing: 0.8px; margin-bottom: 10px;
+            user-select: all; direction: ltr; word-break: break-all;
         }
         .btn-copy {
-            background: var(--primary-color); color: #000; border: none; padding: 12px; border-radius: 10px;
-            font-size: 15px; font-weight: 700; width: 100%; cursor: pointer; margin-bottom: 8px;
+            background: var(--primary-color); color: #000; border: none; padding: 11px; border-radius: 10px;
+            font-size: 14px; font-weight: 700; width: 100%; cursor: pointer; margin-bottom: 14px;
         }
         .btn-close {
             background: transparent; color: #888; border: none; padding: 8px;
             font-size: 13px; width: 100%; cursor: pointer;
         }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -161,6 +161,7 @@
     </div>
 </div>
 
+<!-- نافذة المحفظة الكاش -->
 <div class="modal-overlay" id="walletModal" onclick="if(event.target===this) this.style.display='none'">
     <div class="modal-box">
         <div class="modal-title" id="walletModalTitle">التحويل عبر محفظة كاش</div>
@@ -168,6 +169,28 @@
         <div class="wallet-num" id="walletNumberDisplay"></div>
         <button class="btn-copy" id="copyWalletBtn">✓ تم نسخ الرقم</button>
         <button class="btn-close" onclick="document.getElementById('walletModal').style.display='none'">إغلاق</button>
+    </div>
+</div>
+
+<!-- نافذة الحساب البنكي + IBAN -->
+<div class="modal-overlay" id="bankModal" onclick="if(event.target===this) this.style.display='none'">
+    <div class="modal-box">
+        <div class="modal-title" id="bankModalTitle">بيانات الحساب البنكي</div>
+        <div class="modal-desc">اضغط على زر النسخ أسفل الرقم المطلوب للتحويل</div>
+
+        <div id="accountSection" class="hidden">
+            <div class="field-label">رقم الحساب البنكي (Account Number):</div>
+            <div class="wallet-num" id="bankAccountDisplay"></div>
+            <button class="btn-copy" id="copyAccountBtn">نسخ رقم الحساب</button>
+        </div>
+
+        <div id="ibanSection" class="hidden">
+            <div class="field-label">الرقم المصرفي الدولي (IBAN):</div>
+            <div class="wallet-num" id="bankIbanDisplay"></div>
+            <button class="btn-copy" id="copyIbanBtn">نسخ رقم الـ IBAN</button>
+        </div>
+
+        <button class="btn-close" onclick="document.getElementById('bankModal').style.display='none'">إغلاق</button>
     </div>
 </div>
 
@@ -191,7 +214,6 @@
     const params = new URLSearchParams(window.location.search);
     const username = params.get("u");
 
-    // استخراج اللون السائد من صورة اللوجو تلقائياً وتطبيق ثيم متناسق معه
     function autoThemeFromLogo(imgElement) {
         try {
             const canvas = document.createElement("canvas");
@@ -238,7 +260,6 @@
         } catch (e) {}
     }
 
-    // تحميل وتطبيق الخط المخصص (اختياري)
     async function applyCustomFont(fontData) {
         if (!fontData) return;
         try {
@@ -257,6 +278,7 @@
         }
         document.getElementById("walletModalTitle").innerText = title || "التحويل عبر محفظة كاش";
         document.getElementById("walletNumberDisplay").innerText = phoneNumber;
+
         const copyBtn = document.getElementById("copyWalletBtn");
         copyBtn.innerText = "✓ تم نسخ الرقم";
         copyBtn.onclick = () => {
@@ -264,6 +286,47 @@
             copyBtn.innerText = "✓ تم النسخ بنجاح";
         };
         document.getElementById("walletModal").style.display = "flex";
+    }
+
+    function openBankModal(title, bankAccount, iban) {
+        document.getElementById("bankModalTitle").innerText = title || "بيانات الحساب البنكي";
+
+        const accSec = document.getElementById("accountSection");
+        const ibanSec = document.getElementById("ibanSection");
+
+        if (bankAccount) {
+            accSec.classList.remove("hidden");
+            document.getElementById("bankAccountDisplay").innerText = bankAccount;
+            const accBtn = document.getElementById("copyAccountBtn");
+            accBtn.innerText = "نسخ رقم الحساب";
+            accBtn.onclick = () => {
+                navigator.clipboard.writeText(bankAccount);
+                accBtn.innerText = "✓ تم نسخ رقم الحساب";
+            };
+        } else {
+            accSec.classList.add("hidden");
+        }
+
+        if (iban) {
+            ibanSec.classList.remove("hidden");
+            document.getElementById("bankIbanDisplay").innerText = iban;
+            const ibanBtn = document.getElementById("copyIbanBtn");
+            ibanBtn.innerText = "نسخ رقم الـ IBAN";
+            ibanBtn.onclick = () => {
+                navigator.clipboard.writeText(iban);
+                ibanBtn.innerText = "✓ تم نسخ الـ IBAN";
+            };
+        } else {
+            ibanSec.classList.add("hidden");
+        }
+
+        // نسخ تلقائي لأول رقم متاح بمجرد فتح النافذة
+        const defaultCopy = bankAccount || iban;
+        if (defaultCopy && navigator.clipboard) {
+            navigator.clipboard.writeText(defaultCopy);
+        }
+
+        document.getElementById("bankModal").style.display = "flex";
     }
 
     async function loadPublicProfile() {
@@ -332,6 +395,7 @@
             const rawUrl = (link.url || "").trim();
             const cleanUrl = rawUrl.replace(/^https?:\/\//i, "").replace(/\s+/g, "");
             const isWalletNumber = /^(\+?2)?01[0125][0-9]{8}$/.test(cleanUrl);
+            const isBankAccount = link.icon === "fa-solid fa-building-columns";
 
             const a = document.createElement("a");
             a.className = "link-card";
@@ -343,7 +407,15 @@
                 <i class="fa-solid fa-chevron-left"></i>
             `;
 
-            if (isWalletNumber) {
+            if (isBankAccount) {
+                const acc = link.bankAccount || (!/^https?:\/\//i.test(rawUrl) ? rawUrl : "");
+                const iban = link.iban || "";
+                a.href = "#";
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    openBankModal(link.title, acc, iban);
+                };
+            } else if (isWalletNumber) {
                 const pureNumber = cleanUrl.replace(/^\+?2/, "");
                 a.href = "#";
                 a.onclick = (e) => {
@@ -351,7 +423,8 @@
                     openWalletModal(link.title, pureNumber);
                 };
             } else {
-                a.href = rawUrl;
+                const finalHref = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+                a.href = finalHref;
                 a.target = "_blank";
             }
 

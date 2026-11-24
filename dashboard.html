@@ -280,12 +280,17 @@
 
     window.logout = () => signOut(auth);
 
-    // تحديث شكل الحقل حسب نوع الزر (واتساب / محفظة / رابط عادي)
+    // تحديث الحقول حسب نوع الزر
     window.handleIconChange = (selectEl) => {
         const item = selectEl.closest(".link-item");
+        const standardBox = item.querySelector(".standard-url-box");
+        const bankBox = item.querySelector(".bank-fields-box");
         const urlInput = item.querySelector(".link-url");
         const titleInput = item.querySelector(".link-title");
         const hint = item.querySelector(".helper-hint");
+
+        standardBox.classList.remove("hidden");
+        bankBox.classList.add("hidden");
 
         if (selectEl.value === "fa-brands fa-whatsapp") {
             urlInput.placeholder = "اكتب رقم الواتساب فقط (مثال: 01012345678)";
@@ -299,6 +304,17 @@
             if (!titleInput.value) titleInput.value = "الدفع عبر محفظة كاش";
             hint.innerText = "✓ عند الضغط سيتم نسخ الرقم تلقائياً للعميل";
             hint.style.display = "block";
+        } else if (selectEl.value === "fa-solid fa-building-columns") {
+            standardBox.classList.add("hidden");
+            bankBox.classList.remove("hidden");
+            if (!titleInput.value) titleInput.value = "بيانات التحويل البنكي";
+            hint.innerText = "✓ سيظهر للعميل رقم الحساب ورقم الـ IBAN مع زرار نسخ لكل واحد";
+            hint.style.display = "block";
+        } else if (selectEl.value === "fa-brands fa-facebook") {
+            urlInput.placeholder = "رابط صفحة الفيسبوك (https://facebook.com/...)";
+            urlInput.dir = "ltr";
+            if (!titleInput.value) titleInput.value = "صفحتنا على Facebook";
+            hint.style.display = "none";
         } else {
             urlInput.placeholder = "الرابط (https://...)";
             urlInput.dir = "ltr";
@@ -306,12 +322,13 @@
         }
     };
 
-    window.addLinkField = (title = "", url = "", icon = "fa-solid fa-link") => {
-        // لو رابط واتساب محفوظ بصيغة wa.me نعرض الرقم صافي في لوحة التحكم لسهولة التعديل
+    window.addLinkField = (title = "", url = "", icon = "fa-solid fa-link", bankAccount = "", iban = "") => {
         let displayVal = url;
         if (icon === "fa-brands fa-whatsapp" && /^https?:\/\/wa\.me\/2(01[0125][0-9]{8})$/.test(url)) {
             displayVal = url.replace(/^https?:\/\/wa\.me\/2/, "");
         }
+        // دعم البيانات القديمة لو كان الحساب محفوظ في url
+        const savedAccount = bankAccount || (icon === "fa-solid fa-building-columns" && !iban ? url : "");
 
         const div = document.createElement("div");
         div.className = "link-item";
@@ -320,14 +337,25 @@
                 <option value="fa-solid fa-utensils" ${icon === 'fa-solid fa-utensils' ? 'selected' : ''}>منيو (Menu)</option>
                 <option value="fa-solid fa-star" ${icon === 'fa-solid fa-star' ? 'selected' : ''}>تقييم جوجل (Google Review)</option>
                 <option value="fa-brands fa-whatsapp" ${icon === 'fa-brands fa-whatsapp' ? 'selected' : ''}>واتساب (WhatsApp - رقم مباشر)</option>
-                <option value="fa-solid fa-wallet" ${icon === 'fa-solid fa-wallet' ? 'selected' : ''}>دفع كاش (Wallet - نسخ الرقم)</option>
+                <option value="fa-brands fa-facebook" ${icon === 'fa-brands fa-facebook' ? 'selected' : ''}>فيسبوك (Facebook)</option>
                 <option value="fa-brands fa-instagram" ${icon === 'fa-brands fa-instagram' ? 'selected' : ''}>إنستجرام (Instagram)</option>
                 <option value="fa-brands fa-tiktok" ${icon === 'fa-brands fa-tiktok' ? 'selected' : ''}>تيك توك (TikTok)</option>
+                <option value="fa-solid fa-wallet" ${icon === 'fa-solid fa-wallet' ? 'selected' : ''}>دفع كاش (Wallet - نسخ الرقم)</option>
+                <option value="fa-solid fa-building-columns" ${icon === 'fa-solid fa-building-columns' ? 'selected' : ''}>حساب بنكي (رقم الحساب + IBAN)</option>
                 <option value="fa-solid fa-location-dot" ${icon === 'fa-solid fa-location-dot' ? 'selected' : ''}>الموقع (Location)</option>
                 <option value="fa-solid fa-link" ${icon === 'fa-solid fa-link' ? 'selected' : ''}>رابط عام (Link)</option>
             </select>
             <input type="text" class="link-title" placeholder="عنوان الزر (مثال: المنيو الديجيتال)" value="${title}">
-            <input type="text" class="link-url" placeholder="الرابط (https://...)" value="${displayVal}">
+            
+            <div class="standard-url-box">
+                <input type="text" class="link-url" placeholder="الرابط (https://...)" value="${displayVal}">
+            </div>
+
+            <div class="bank-fields-box hidden">
+                <input type="text" class="bank-account-input" dir="ltr" placeholder="رقم الحساب البنكي (أرقام فقط)" value="${savedAccount}">
+                <input type="text" class="bank-iban-input" dir="ltr" placeholder="الرقم المصرفي الدولي IBAN (مثال: EG380002...)" value="${iban}">
+            </div>
+
             <div class="helper-hint"></div>
             <button class="btn-danger" onclick="this.parentElement.remove()">حذف</button>
         `;
@@ -361,7 +389,7 @@
             }
 
             updateShareLink(data.username);
-            (data.links || []).forEach(l => addLinkField(l.title, l.url, l.icon));
+            (data.links || []).forEach(l => addLinkField(l.title, l.url || "", l.icon, l.bankAccount || "", l.iban || ""));
         } else {
             addLinkField();
         }
@@ -382,15 +410,28 @@
             const links = [];
             document.querySelectorAll(".link-item").forEach(item => {
                 const title = item.querySelector(".link-title").value.trim();
-                let url = item.querySelector(".link-url").value.trim();
                 const icon = item.querySelector(".link-icon").value;
 
-                if (title && url) {
-                    // تحويل رقم الواتساب المصري تلقائياً إلى رابط wa.me
+                if (!title) return;
+
+                if (icon === "fa-solid fa-building-columns") {
+                    const bankAccount = item.querySelector(".bank-account-input").value.trim();
+                    const iban = item.querySelector(".bank-iban-input").value.trim().toUpperCase();
+                    if (bankAccount || iban) {
+                        links.push({ title, icon, bankAccount, iban, url: bankAccount || iban });
+                    }
+                } else {
+                    let url = item.querySelector(".link-url").value.trim();
+                    if (!url) return;
+
                     if (icon === "fa-brands fa-whatsapp") {
                         const cleanPhone = url.replace(/\s+/g, "").replace(/^\+?2/, "");
                         if (/^01[0125][0-9]{8}$/.test(cleanPhone)) {
                             url = `https://wa.me/2${cleanPhone}`;
+                        }
+                    } else if (icon === "fa-brands fa-facebook") {
+                        if (!/^https?:\/\//i.test(url)) {
+                            url = `https://${url}`;
                         }
                     }
                     links.push({ title, url, icon });

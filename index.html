@@ -157,7 +157,7 @@
     <div class="links-wrapper" id="linksContainer"></div>
 
     <div class="footer">
-        Powered by <a href="dashboard.html"><strong>Tap & Go</strong></a> | 01006901765
+        Powered by <a href="https://wa.me/201006901765" target="_blank"><strong>Tap & Go</strong></a> | 01006901765
     </div>
 </div>
 
@@ -364,7 +364,7 @@
         }
 
         const bgEl = document.getElementById("dynamicBg");
-        if (data.bgImageUrl) {
+        if (data.bgImageUrl && /^(data:image\/|https:\/\/)/.test(data.bgImageUrl) && !/['")\s]/.test(data.bgImageUrl)) {
             bgEl.style.backgroundImage = `url('${data.bgImageUrl}')`;
         }
 
@@ -399,13 +399,17 @@
 
             const a = document.createElement("a");
             a.className = "link-card";
-            a.innerHTML = `
-                <div class="link-info">
-                    <i class="${link.icon}"></i>
-                    <span>${link.title}</span>
-                </div>
-                <i class="fa-solid fa-chevron-left"></i>
-            `;
+            const ALLOWED = ["fa-solid fa-utensils","fa-solid fa-star","fa-brands fa-whatsapp","fa-solid fa-phone","fa-brands fa-facebook","fa-brands fa-instagram","fa-brands fa-tiktok","fa-solid fa-wallet","fa-solid fa-building-columns","fa-solid fa-location-dot","fa-solid fa-link"];
+            const info = document.createElement("div");
+            info.className = "link-info";
+            const ic = document.createElement("i");
+            ic.className = ALLOWED.includes(link.icon) ? link.icon : "fa-solid fa-link";
+            const sp = document.createElement("span");
+            sp.textContent = link.title;
+            info.append(ic, sp);
+            const chev = document.createElement("i");
+            chev.className = "fa-solid fa-chevron-left";
+            a.append(info, chev);
 
             if (isBankAccount) {
                 const acc = link.bankAccount || (!/^https?:\/\//i.test(rawUrl) ? rawUrl : "");
@@ -415,6 +419,8 @@
                     e.preventDefault();
                     openBankModal(link.title, acc, iban);
                 };
+            } else if (link.icon === "fa-solid fa-phone" && /^tel:\+?\d{6,15}$/.test(rawUrl)) {
+                a.href = rawUrl;
             } else if (isWalletNumber) {
                 const pureNumber = cleanUrl.replace(/^\+?2/, "");
                 a.href = "#";
